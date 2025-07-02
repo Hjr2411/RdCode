@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RdCod_H v1.3.3</title>
+<title>RdCod_H v1.4</title>
 <style>
 body {background: #343541; color: #ececec; font-family: Arial; margin: 0;}
 header {background: #202123; padding: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;}
@@ -28,6 +28,7 @@ button {background: #0fa47f; color: white; border: none; padding: 6px 10px; bord
 .code-meta {font-size: 0.9em; color: #ccc; margin-bottom: 8px;}
 .code-content {background: #343541; padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-word;}
 .code-actions {display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;}
+.admin-panel {background: #202123; padding: 10px; border-radius: 8px; margin-bottom: 20px;}
 @media (max-width: 600px) {select {flex: 1;}.login-container {width: 100%; justify-content: flex-end;}}
 </style>
 
@@ -61,6 +62,7 @@ window.login = async function() {
     usuarioLogado = user;
     tipoUsuario = snap.val().tipo;
     alert(`Logado como ${tipoUsuario}`);
+    document.getElementById('adminPanel').style.display = tipoUsuario === 'admin' ? 'block' : 'none';
     carregarCodigos();
   } else {
     alert("Usuário ou senha inválidos.");
@@ -71,6 +73,25 @@ window.logout = function() {
   usuarioLogado = "";
   tipoUsuario = "";
   document.getElementById('listaCodigos').innerHTML = "";
+  document.getElementById('adminPanel').style.display = 'none';
+}
+
+window.cadastrarUsuario = function() {
+  const user = document.getElementById('novoUsuario').value.trim();
+  const senha = document.getElementById('novaSenha').value.trim();
+  const tipo = document.getElementById('novoTipo').value.trim();
+
+  if (!user || !senha) {alert("Usuário e senha são obrigatórios!"); return;}
+  
+  set(ref(db, 'usuarios/' + user), {
+    senha: senha,
+    tipo: tipo
+  }).then(()=>{
+    alert('Usuário cadastrado!');
+    document.getElementById('novoUsuario').value = '';
+    document.getElementById('novaSenha').value = '';
+    document.getElementById('novoTipo').value = 'user';
+  });
 }
 
 window.salvarCodigo = function() {
@@ -190,7 +211,7 @@ function carregarCodigos() {
 
 <body>
 <header>
-  <div class="title">RdCod_H v1.3.3</div>
+  <div class="title">RdCod_H v1.4</div>
   <div class="login-container">
     <input type="text" id="usuario" placeholder="Usuário">
     <input type="password" id="senha" placeholder="Senha">
@@ -200,6 +221,19 @@ function carregarCodigos() {
 </header>
 
 <main>
+  <div id="adminPanel" class="admin-panel" style="display:none;">
+    <h3>👥 Cadastro de Usuários (Admin)</h3>
+    <div class="form-row">
+      <input type="text" id="novoUsuario" placeholder="Novo Usuário">
+      <input type="password" id="novaSenha" placeholder="Senha">
+      <select id="novoTipo">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button onclick="cadastrarUsuario()">Cadastrar</button>
+    </div>
+  </div>
+
   <div class="counter" id="contadorCodigos">Total de Códigos: 0</div>
   <div class="form-container">
     <div class="form-row">
