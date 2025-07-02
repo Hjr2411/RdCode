@@ -1,8 +1,10 @@
-<!DOCTYPE html><html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RdCod_H v1.3.2</title><style>
+<title>RdCod_H v1.3.3</title>
+<style>
 body {background: #343541; color: #ececec; font-family: Arial; margin: 0;}
 header {background: #202123; padding: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;}
 .title {font-size: 1.5rem; font-weight: bold;}
@@ -27,7 +29,9 @@ button {background: #0fa47f; color: white; border: none; padding: 6px 10px; bord
 .code-content {background: #343541; padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-word;}
 .code-actions {display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;}
 @media (max-width: 600px) {select {flex: 1;}.login-container {width: 100%; justify-content: flex-end;}}
-</style><script type="module">
+</style>
+
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push, set, remove, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -40,6 +44,7 @@ const firebaseConfig = {
   messagingSenderId: "431216579611",
   appId: "1:431216579611:web:054613cef17d08680154be"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const dbRef = ref(db);
@@ -97,12 +102,12 @@ window.excluirCodigo = function(id) {
   });
 }
 
-window.editarCodigo = function(id, item) {
+window.editarCodigo = function(id, titulo, descricao, linguagem, codigo) {
   if (tipoUsuario !== 'admin') {alert("Somente admin pode editar."); return;}
-  document.getElementById('titulo').value = item.titulo;
-  document.getElementById('descricao').value = item.descricao;
-  document.getElementById('linguagem').value = item.linguagem;
-  document.getElementById('codigo').value = item.codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  document.getElementById('titulo').value = titulo;
+  document.getElementById('descricao').value = descricao;
+  document.getElementById('linguagem').value = linguagem;
+  document.getElementById('codigo').value = codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
   excluirCodigo(id);
 }
 
@@ -110,12 +115,12 @@ window.copiarCodigo = function(codigo) {
   navigator.clipboard.writeText(codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>')).then(()=>alert("Copiado!"));
 }
 
-window.exportarCSV = function(item) {
-  const conteudo = `${item.titulo};${item.linguagem};${item.descricao};${item.codigo};${item.usuario};${item.datahora}\n`;
+window.exportarCSV = function(titulo, linguagem, descricao, codigo, usuario, datahora) {
+  const conteudo = `${titulo};${linguagem};${descricao};${codigo};${usuario};${datahora}\n`;
   const blob = new Blob([conteudo], {type:"text/csv;charset=utf-8;"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `${item.titulo}.csv`;
+  link.download = `${titulo}.csv`;
   link.click();
 }
 
@@ -149,6 +154,7 @@ function carregarCodigos() {
       for (let id in dados) {
         total++;
         const item = dados[id];
+
         const div = document.createElement('div');
         div.className = 'code-card';
         div.innerHTML = `
@@ -157,8 +163,21 @@ function carregarCodigos() {
           <div class="code-content">${item.codigo}</div>
           <div class="code-actions">
             <button onclick="copiarCodigo(\`${item.codigo}\`)">📋 Copiar</button>
-            <button onclick='exportarCSV(${JSON.stringify(item)})'>📤 CSV</button>
-            ${tipoUsuario==='admin' ? `<button onclick='editarCodigo("${id}", ${JSON.stringify(item)})'>✏️ Editar</button><button onclick='excluirCodigo("${id}")'>🗑️ Excluir</button>` : ''}
+            <button onclick='exportarCSV(
+              "${item.titulo.replace(/"/g,'\\"')}",
+              "${item.linguagem}",
+              "${item.descricao || ''}",
+              \`${item.codigo.replace(/`/g,'\\`')}\`,
+              "${item.usuario}",
+              "${item.datahora}"
+            )'>📤 CSV</button>
+            ${tipoUsuario==='admin' ? `<button onclick='editarCodigo(
+              "${id}",
+              "${item.titulo.replace(/"/g,'\\"')}",
+              "${item.descricao || ''}",
+              "${item.linguagem}",
+              \`${item.codigo.replace(/`/g,'\\`')}\`
+            )'>✏️ Editar</button><button onclick='excluirCodigo("${id}")'>🗑️ Excluir</button>` : ''}
           </div>`;
         lista.appendChild(div);
       }
@@ -166,16 +185,21 @@ function carregarCodigos() {
     }
   });
 }
-</script></head><body>
+</script>
+</head>
+
+<body>
 <header>
-  <div class="title">RdCod_H v1.3.2</div>
+  <div class="title">RdCod_H v1.3.3</div>
   <div class="login-container">
     <input type="text" id="usuario" placeholder="Usuário">
     <input type="password" id="senha" placeholder="Senha">
     <button onclick="login()">Entrar</button>
     <button onclick="logout()">Sair</button>
   </div>
-</header><main>
+</header>
+
+<main>
   <div class="counter" id="contadorCodigos">Total de Códigos: 0</div>
   <div class="form-container">
     <div class="form-row">
@@ -197,11 +221,15 @@ function carregarCodigos() {
     <div class="form-actions">
       <button onclick="salvarCodigo()">💾 Salvar Código</button>
     </div>
-  </div>  <div class="search-container">
+  </div>
+
+  <div class="search-container">
     <input type="text" id="busca" placeholder="🔍 Buscar...">
     <button onclick="pesquisar()">Pesquisar</button>
     <button onclick="limparBusca()">Limpar Busca</button>
-  </div>  <div id="listaCodigos"></div>
+  </div>
+
+  <div id="listaCodigos"></div>
 </main>
 </body>
 </html>
