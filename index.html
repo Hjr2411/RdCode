@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RdCod_H v1.4</title>
+<title>RdCod_H v1.4.1</title>
 <style>
 body {background: #343541; color: #ececec; font-family: Arial; margin: 0;}
 header {background: #202123; padding: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;}
@@ -28,7 +28,6 @@ button {background: #0fa47f; color: white; border: none; padding: 6px 10px; bord
 .code-meta {font-size: 0.9em; color: #ccc; margin-bottom: 8px;}
 .code-content {background: #343541; padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-word;}
 .code-actions {display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;}
-.admin-panel {background: #202123; padding: 10px; border-radius: 8px; margin-bottom: 20px;}
 @media (max-width: 600px) {select {flex: 1;}.login-container {width: 100%; justify-content: flex-end;}}
 </style>
 
@@ -53,6 +52,7 @@ const dbRef = ref(db);
 let usuarioLogado = "";
 let tipoUsuario = "";
 
+// LOGIN
 window.login = async function() {
   const user = document.getElementById('usuario').value.trim();
   const senha = document.getElementById('senha').value.trim();
@@ -62,7 +62,6 @@ window.login = async function() {
     usuarioLogado = user;
     tipoUsuario = snap.val().tipo;
     alert(`Logado como ${tipoUsuario}`);
-    document.getElementById('adminPanel').style.display = tipoUsuario === 'admin' ? 'block' : 'none';
     carregarCodigos();
   } else {
     alert("Usuário ou senha inválidos.");
@@ -73,27 +72,9 @@ window.logout = function() {
   usuarioLogado = "";
   tipoUsuario = "";
   document.getElementById('listaCodigos').innerHTML = "";
-  document.getElementById('adminPanel').style.display = 'none';
 }
 
-window.cadastrarUsuario = function() {
-  const user = document.getElementById('novoUsuario').value.trim();
-  const senha = document.getElementById('novaSenha').value.trim();
-  const tipo = document.getElementById('novoTipo').value.trim();
-
-  if (!user || !senha) {alert("Usuário e senha são obrigatórios!"); return;}
-  
-  set(ref(db, 'usuarios/' + user), {
-    senha: senha,
-    tipo: tipo
-  }).then(()=>{
-    alert('Usuário cadastrado!');
-    document.getElementById('novoUsuario').value = '';
-    document.getElementById('novaSenha').value = '';
-    document.getElementById('novoTipo').value = 'user';
-  });
-}
-
+// SALVAR
 window.salvarCodigo = function() {
   const titulo = document.getElementById('titulo').value.trim();
   const descricao = document.getElementById('descricao').value.trim();
@@ -115,6 +96,7 @@ window.salvarCodigo = function() {
   });
 }
 
+// EXCLUIR
 window.excluirCodigo = function(id) {
   if (tipoUsuario !== 'admin') {alert("Somente admin pode excluir."); return;}
   get(child(dbRef, 'codigos/' + id)).then(snap => {
@@ -123,28 +105,44 @@ window.excluirCodigo = function(id) {
   });
 }
 
-window.editarCodigo = function(id, titulo, descricao, linguagem, codigo) {
+// EDITAR
+window.editarCodigo = function(id, item) {
   if (tipoUsuario !== 'admin') {alert("Somente admin pode editar."); return;}
-  document.getElementById('titulo').value = titulo;
-  document.getElementById('descricao').value = descricao;
-  document.getElementById('linguagem').value = linguagem;
-  document.getElementById('codigo').value = codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
+  document.getElementById('titulo').value = item.titulo;
+  document.getElementById('descricao').value = item.descricao;
+  document.getElementById('linguagem').value = item.linguagem;
+  document.getElementById('codigo').value = item.codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>');
   excluirCodigo(id);
 }
 
+// COPIAR
 window.copiarCodigo = function(codigo) {
   navigator.clipboard.writeText(codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>')).then(()=>alert("Copiado!"));
 }
 
-window.exportarCSV = function(titulo, linguagem, descricao, codigo, usuario, datahora) {
-  const conteudo = `${titulo};${linguagem};${descricao};${codigo};${usuario};${datahora}\n`;
+// EXPORTAR CSV
+window.exportarCSV = function(item) {
+  const conteudo = `${item.titulo};${item.linguagem};${item.descricao};${item.codigo};${item.usuario};${item.datahora}\n`;
   const blob = new Blob([conteudo], {type:"text/csv;charset=utf-8;"});
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `${titulo}.csv`;
+  link.download = `${item.titulo}.csv`;
   link.click();
 }
 
+// CADASTRAR USUÁRIO (ADMIN ONLY)
+window.cadastrarUsuario = function() {
+  if (tipoUsuario !== 'admin') {alert("Somente admin pode cadastrar usuários."); return;}
+  const novoUsuario = prompt("Digite o nome do novo usuário:");
+  const novaSenha = prompt("Digite a senha:");
+  const tipo = prompt("Digite o tipo (admin ou user):", "user");
+  if (!novoUsuario || !novaSenha || !tipo) {alert("Dados inválidos."); return;}
+
+  set(ref(db, 'usuarios/' + novoUsuario), {senha: novaSenha, tipo: tipo.toLowerCase()})
+    .then(() => alert("Usuário cadastrado!"));
+}
+
+// PESQUISAR
 window.pesquisar = function() {
   const termo = document.getElementById('busca').value.toLowerCase();
   document.querySelectorAll('.code-card').forEach(c => {
@@ -165,6 +163,7 @@ function limparCampos() {
   document.getElementById('codigo').value = "";
 }
 
+// CARREGAR CÓDIGOS
 function carregarCodigos() {
   const lista = document.getElementById('listaCodigos');
   lista.innerHTML = "";
@@ -178,27 +177,16 @@ function carregarCodigos() {
 
         const div = document.createElement('div');
         div.className = 'code-card';
+
         div.innerHTML = `
           <div class="code-header">${item.titulo}</div>
           <div class="code-meta">${item.linguagem} | ${item.descricao || ''}<br>${item.usuario} | ${item.datahora}</div>
           <div class="code-content">${item.codigo}</div>
           <div class="code-actions">
             <button onclick="copiarCodigo(\`${item.codigo}\`)">📋 Copiar</button>
-            <button onclick='exportarCSV(
-              "${item.titulo.replace(/"/g,'\\"')}",
-              "${item.linguagem}",
-              "${item.descricao || ''}",
-              \`${item.codigo.replace(/`/g,'\\`')}\`,
-              "${item.usuario}",
-              "${item.datahora}"
-            )'>📤 CSV</button>
-            ${tipoUsuario==='admin' ? `<button onclick='editarCodigo(
-              "${id}",
-              "${item.titulo.replace(/"/g,'\\"')}",
-              "${item.descricao || ''}",
-              "${item.linguagem}",
-              \`${item.codigo.replace(/`/g,'\\`')}\`
-            )'>✏️ Editar</button><button onclick='excluirCodigo("${id}")'>🗑️ Excluir</button>` : ''}
+            <button onclick='exportarCSV(${JSON.stringify(item)})'>📤 CSV</button>
+            ${tipoUsuario==='admin' ? `<button onclick='editarCodigo("${id}", ${JSON.stringify(item)})'>✏️ Editar</button>
+            <button onclick='excluirCodigo("${id}")'>🗑️ Excluir</button>` : ''}
           </div>`;
         lista.appendChild(div);
       }
@@ -208,33 +196,22 @@ function carregarCodigos() {
 }
 </script>
 </head>
-
 <body>
+
 <header>
-  <div class="title">RdCod_H v1.4</div>
+  <div class="title">RdCod_H v1.4.1</div>
   <div class="login-container">
     <input type="text" id="usuario" placeholder="Usuário">
     <input type="password" id="senha" placeholder="Senha">
     <button onclick="login()">Entrar</button>
     <button onclick="logout()">Sair</button>
+    <button onclick="cadastrarUsuario()">+Usuário</button>
   </div>
 </header>
 
 <main>
-  <div id="adminPanel" class="admin-panel" style="display:none;">
-    <h3>👥 Cadastro de Usuários (Admin)</h3>
-    <div class="form-row">
-      <input type="text" id="novoUsuario" placeholder="Novo Usuário">
-      <input type="password" id="novaSenha" placeholder="Senha">
-      <select id="novoTipo">
-        <option value="user">User</option>
-        <option value="admin">Admin</option>
-      </select>
-      <button onclick="cadastrarUsuario()">Cadastrar</button>
-    </div>
-  </div>
-
   <div class="counter" id="contadorCodigos">Total de Códigos: 0</div>
+
   <div class="form-container">
     <div class="form-row">
       <input type="text" id="titulo" placeholder="Título">
@@ -265,5 +242,6 @@ function carregarCodigos() {
 
   <div id="listaCodigos"></div>
 </main>
+
 </body>
 </html>
