@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RdCod_H v1.4.1</title>
+<title>RdCod_H v1.3.7</title>
 <style>
 body {background: #343541; color: #ececec; font-family: Arial; margin: 0;}
 header {background: #202123; padding: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;}
@@ -52,7 +52,6 @@ const dbRef = ref(db);
 let usuarioLogado = "";
 let tipoUsuario = "";
 
-// LOGIN
 window.login = async function() {
   const user = document.getElementById('usuario').value.trim();
   const senha = document.getElementById('senha').value.trim();
@@ -74,7 +73,6 @@ window.logout = function() {
   document.getElementById('listaCodigos').innerHTML = "";
 }
 
-// SALVAR
 window.salvarCodigo = function() {
   const titulo = document.getElementById('titulo').value.trim();
   const descricao = document.getElementById('descricao').value.trim();
@@ -96,7 +94,6 @@ window.salvarCodigo = function() {
   });
 }
 
-// EXCLUIR
 window.excluirCodigo = function(id) {
   if (tipoUsuario !== 'admin') {alert("Somente admin pode excluir."); return;}
   get(child(dbRef, 'codigos/' + id)).then(snap => {
@@ -105,8 +102,10 @@ window.excluirCodigo = function(id) {
   });
 }
 
-// EDITAR
-window.editarCodigo = function(id, item) {
+window.editarCodigo = function(btn) {
+  const id = btn.dataset.id;
+  const item = JSON.parse(btn.dataset.item);
+
   if (tipoUsuario !== 'admin') {alert("Somente admin pode editar."); return;}
   document.getElementById('titulo').value = item.titulo;
   document.getElementById('descricao').value = item.descricao;
@@ -115,13 +114,8 @@ window.editarCodigo = function(id, item) {
   excluirCodigo(id);
 }
 
-// COPIAR
-window.copiarCodigo = function(codigo) {
-  navigator.clipboard.writeText(codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>')).then(()=>alert("Copiado!"));
-}
-
-// EXPORTAR CSV
-window.exportarCSV = function(item) {
+window.exportarCSV = function(btn) {
+  const item = JSON.parse(btn.dataset.item);
   const conteudo = `${item.titulo};${item.linguagem};${item.descricao};${item.codigo};${item.usuario};${item.datahora}\n`;
   const blob = new Blob([conteudo], {type:"text/csv;charset=utf-8;"});
   const link = document.createElement("a");
@@ -130,19 +124,10 @@ window.exportarCSV = function(item) {
   link.click();
 }
 
-// CADASTRAR USUÁRIO (ADMIN ONLY)
-window.cadastrarUsuario = function() {
-  if (tipoUsuario !== 'admin') {alert("Somente admin pode cadastrar usuários."); return;}
-  const novoUsuario = prompt("Digite o nome do novo usuário:");
-  const novaSenha = prompt("Digite a senha:");
-  const tipo = prompt("Digite o tipo (admin ou user):", "user");
-  if (!novoUsuario || !novaSenha || !tipo) {alert("Dados inválidos."); return;}
-
-  set(ref(db, 'usuarios/' + novoUsuario), {senha: novaSenha, tipo: tipo.toLowerCase()})
-    .then(() => alert("Usuário cadastrado!"));
+window.copiarCodigo = function(codigo) {
+  navigator.clipboard.writeText(codigo.replace(/&lt;/g,'<').replace(/&gt;/g,'>')).then(()=>alert("Copiado!"));
 }
 
-// PESQUISAR
 window.pesquisar = function() {
   const termo = document.getElementById('busca').value.toLowerCase();
   document.querySelectorAll('.code-card').forEach(c => {
@@ -163,7 +148,6 @@ function limparCampos() {
   document.getElementById('codigo').value = "";
 }
 
-// CARREGAR CÓDIGOS
 function carregarCodigos() {
   const lista = document.getElementById('listaCodigos');
   lista.innerHTML = "";
@@ -177,6 +161,7 @@ function carregarCodigos() {
 
         const div = document.createElement('div');
         div.className = 'code-card';
+        const safeItem = JSON.stringify(item).replace(/"/g, '&quot;');
 
         div.innerHTML = `
           <div class="code-header">${item.titulo}</div>
@@ -184,8 +169,8 @@ function carregarCodigos() {
           <div class="code-content">${item.codigo}</div>
           <div class="code-actions">
             <button onclick="copiarCodigo(\`${item.codigo}\`)">📋 Copiar</button>
-            <button onclick='exportarCSV(${JSON.stringify(item)})'>📤 CSV</button>
-            ${tipoUsuario==='admin' ? `<button onclick='editarCodigo("${id}", ${JSON.stringify(item)})'>✏️ Editar</button>
+            <button data-item="${safeItem}" onclick="exportarCSV(this)">📤 CSV</button>
+            ${tipoUsuario==='admin' ? `<button data-id="${id}" data-item="${safeItem}" onclick="editarCodigo(this)">✏️ Editar</button>
             <button onclick='excluirCodigo("${id}")'>🗑️ Excluir</button>` : ''}
           </div>`;
         lista.appendChild(div);
@@ -199,13 +184,12 @@ function carregarCodigos() {
 <body>
 
 <header>
-  <div class="title">RdCod_H v1.4.1</div>
+  <div class="title">RdCod_H v1.3.7</div>
   <div class="login-container">
     <input type="text" id="usuario" placeholder="Usuário">
     <input type="password" id="senha" placeholder="Senha">
     <button onclick="login()">Entrar</button>
     <button onclick="logout()">Sair</button>
-    <button onclick="cadastrarUsuario()">+Usuário</button>
   </div>
 </header>
 
